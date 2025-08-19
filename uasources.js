@@ -1753,8 +1753,7 @@ else if (element.url) {
   }
   if (!window.bwarch_plugin) startPlugin();
 
-})();
-Lampa.Source.add({
+	Lampa.Source.add({
   title: 'UAkino.best',
   search: function(query, onFind, onError) {
     fetch('https://uakino.best/index.php?do=search&subaction=search&story=' + encodeURIComponent(query))
@@ -1815,3 +1814,4 @@ Lampa.Source.add({
   }
 });
 
+})();

@@ -1,74 +1,54 @@
 (function() {
-  'use strict';
+    'use strict';
 
-  // -----------------------------
-  // Джерело: UAkino.best
-  // -----------------------------
-  Lampa.Source.add({
-    title: 'UAkino.best',
+    var Defined = {
+        api: 'lampac',
+        localhost: 'https://rc.bwa.to/',
+        apn: 'https://apn.watch/'
+    };
 
-    // Пошук фільмів
-    search: function(query, onFind, onError) {
-      fetch('https://uakino.best/index.php?do=search&subaction=search&story=' + encodeURIComponent(query))
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const items = doc.querySelectorAll('.shortstory');
-          const results = Array.from(items).map(el => {
-            const link = el.querySelector('a');
-            const img = el.querySelector('img');
-            return {
-              title: link ? link.textContent.trim() : 'Без назви',
-              url: link ? link.href : '',
-              poster: img ? img.src : '',
-              quality: 'HD'
-            };
-          });
-          onFind(results);
-        })
-        .catch(err => onError(err));
-    },
-
-    // Каталог фільмів
-    catalog: function(params, onFind, onError) {
-      fetch('https://uakino.best/filmy/')
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const items = doc.querySelectorAll('.shortstory');
-          const results = Array.from(items).map(el => {
-            const link = el.querySelector('a');
-            const img = el.querySelector('img');
-            return {
-              title: link ? link.textContent.trim() : 'Без назви',
-              url: link ? link.href : '',
-              poster: img ? img.src : '',
-              quality: 'HD'
-            };
-          });
-          onFind(results);
-        })
-        .catch(err => onError(err));
-    },
-
-    // Відтворення фільму
-    play: function(item, onPlay, onError) {
-      fetch(item.url)
-        .then(r => r.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const iframe = doc.querySelector('iframe');
-          if (iframe && iframe.src) {
-            onPlay([{ url: iframe.src, quality: 'HD' }]);
-          } else {
-            onError('Не вдалося знайти плеєр');
-          }
-        })
-        .catch(err => onError(err));
+    var unic_id = Lampa.Storage.get('lampac_unic_id', '');
+    if (!unic_id) {
+        unic_id = Lampa.Utils.uid(8).toLowerCase();
+        Lampa.Storage.set('lampac_unic_id', unic_id);
     }
-  });
+
+    if (!window.rch) {
+        Lampa.Utils.putScript(
+            ["https://rc.bwa.to/invc-rch.js"], 
+            function() {}, 
+            false, 
+            function() {
+                if (!window.rch.startTypeInvoke)
+                    window.rch.typeInvoke('https://rc.bwa.to', function() {});
+            }, 
+            true
+        );
+    }
+
+    // -----------------------------
+    // Додаємо джерело: UAkino.best через RC
+    // -----------------------------
+    Lampa.Source.add({
+        title: 'UAkino.best',
+        search: function(query, onFind, onError) {
+            if (!window.rch) return onError('RC server не підключено');
+            window.rch.typeInvoke('https://rc.bwa.to', function() {
+                window.rch.invoke({site: 'uakino', action: 'search', query: query}, onFind, onError);
+            });
+        },
+        catalog: function(params, onFind, onError) {
+            if (!window.rch) return onError('RC server не підключено');
+            window.rch.typeInvoke('https://rc.bwa.to', function() {
+                window.rch.invoke({site: 'uakino', action: 'catalog', params: params}, onFind, onError);
+            });
+        },
+        play: function(item, onPlay, onError) {
+            if (!window.rch) return onError('RC server не підключено');
+            window.rch.typeInvoke('https://rc.bwa.to', function() {
+                window.rch.invoke({site: 'uakino', action: 'play', url: item.url}, onPlay, onError);
+            });
+        }
+    });
 
 })();
